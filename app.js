@@ -2,8 +2,10 @@
 require('dotenv').config();
 const express = require('express')
 const mongoose = require("mongoose")
-const md5 = require("md5")
+//const md5 = require("md5")
+const bcrypt = require("bcrypt")
 const _ = require("lodash")
+const saltRounds = 10
 //const encrypt = require("mongoose-encryption")
 
 
@@ -38,20 +40,24 @@ app.get("/register",(req,res)=>{
 
 app.post("/register",(req,res)=>{
     const emailBody = _.capitalize(req.body.username);
-    const passwordBody = md5(req.body.password);
+    const passwordBody = req.body.password;
+    bcrypt.hash(passwordBody, saltRounds, function(err, hash) {
+        const user = new User({
+            email:emailBody,
+            password:hash
+        })
+        User.findOne({email:emailBody,password:passwordBody}).then(result =>{
+            if(result){
+                res.render("secrets")
+            }else{
+                user.save()
+                res.render("secrets")
+            }
+        })
+    });
+ 
 
-    const user = new User({
-        email:emailBody,
-        password:passwordBody
-    })
-    User.findOne({email:emailBody,password:passwordBody}).then(result =>{
-        if(result){
-            res.render("secrets")
-        }else{
-            user.save()
-            res.render("secrets")
-        }
-    })
+   
 })
 
 app.get("/login",(req,res)=>{
@@ -62,21 +68,28 @@ app.get("/login",(req,res)=>{
 
 app.post("/login",(req,res)=>{
     const loginMail = _.capitalize(req.body.username)
-    const loginPassword = md5(req.body.password)
+    const loginPassword = req.body.password
     console.log("Login Page "+loginPassword)
     User.findOne({email:loginMail}).then(result =>{
         if(result){
-            if(result.password===loginPassword){
-               // console.log(result.password);
-                res.render("secrets")
-            }
-           else{
-            res.write("<h1>Wrong Password</h1>")
+            bcrypt.compare(loginPassword, result.password, function(err, resume) {
+                if(resume==true)
+                {
+                    res.render("secrets")
+                }
+                
+                else{
+                    res.write("<h1>Wrong Password</h1>")
+                }
+            });
+            
+           
             // res.redirect("/login")
            }
-        }else{
+        else{
             res.render("register")
         }
+    
     })
 })
 
