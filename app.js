@@ -2,7 +2,9 @@
 require('dotenv').config();
 const express = require('express')
 const mongoose = require("mongoose")
-const encrypt = require("mongoose-encryption")
+const md5 = require("md5")
+const _ = require("lodash")
+//const encrypt = require("mongoose-encryption")
 
 
 
@@ -18,8 +20,8 @@ const userSchema = new mongoose.Schema( {
     password:{ type: String, required: true},
 })
 
-var secret_key= process.env.SOME_LONG_STRING
-userSchema.plugin(encrypt, {secret:secret_key,encryptedFields: ['password']});
+//var secret_key= process.env.SOME_LONG_STRING
+//userSchema.plugin(encrypt, {secret:secret_key,encryptedFields: ['password']});
 
 const User = mongoose.model("user",userSchema)
 
@@ -35,8 +37,8 @@ app.get("/register",(req,res)=>{
 })
 
 app.post("/register",(req,res)=>{
-    const emailBody = req.body.username;
-    const passwordBody = req.body.password;
+    const emailBody = _.capitalize(req.body.username);
+    const passwordBody = md5(req.body.password);
 
     const user = new User({
         email:emailBody,
@@ -59,8 +61,9 @@ app.get("/login",(req,res)=>{
 
 
 app.post("/login",(req,res)=>{
-    const loginMail = req.body.username
-    const loginPassword = req.body.password
+    const loginMail = _.capitalize(req.body.username)
+    const loginPassword = md5(req.body.password)
+    console.log("Login Page "+loginPassword)
     User.findOne({email:loginMail}).then(result =>{
         if(result){
             if(result.password===loginPassword){
@@ -69,10 +72,10 @@ app.post("/login",(req,res)=>{
             }
            else{
             res.write("<h1>Wrong Password</h1>")
-            
+            // res.redirect("/login")
            }
         }else{
-            res.render("secrets")
+            res.render("register")
         }
     })
 })
